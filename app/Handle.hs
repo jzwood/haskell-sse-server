@@ -2,7 +2,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Handle (handle) where
+module Handle (handle, sse) where
 
 import Control.Applicative
 import Data.ByteString (ByteString)
@@ -33,6 +33,9 @@ ok contentType status body'  =
         , body'
         }
 
+sse :: Resp
+sse = ok "text/event-stream" 200 "chat"
+
 txt :: ByteString -> Resp
 txt = ok "text/plain" 200
 
@@ -41,6 +44,9 @@ file = ok "application/octet-stream" 200
 
 write :: Resp
 write = ok "text/plain" 201 B.empty
+
+html :: ByteString -> Resp
+html = ok "text/html" 200
 
 notFound :: Resp
 notFound =
@@ -56,12 +62,22 @@ parseRoute =
     (string "/" *> endOfInput $> ["/"])
         <|> (string "/user-agent" *> endOfInput $> ["user-agent"])
         <|> (string "/files/" *> takeByteString <&> \path -> ["files", path])
+        <|> (string "/html/" *> takeByteString <&> \path -> ["html", path])
+        <|> (string "/sse" $> ["sse"])
         <|> (string "/echo/" *> takeByteString <&> \echo -> ["echo", echo])
 
 routeToResp :: Env -> Method -> Req -> [ByteString] -> IO Resp
 routeToResp _ GET _ ["/"] = pure $ txt ""
 routeToResp _ GET _ ["echo", echo] = pure $ txt echo
+routeToResp _ GET _ ["sse"] = pure $ txt "SSE"
 routeToResp _ GET Req { headers } ["user-agent"] = pure $ txt (getHeader "User-Agent" headers)
+routeToResp Env { dir } GET _ ["html", bsPath] =
+    B.toFilePath (dir <> "/" <> bsPath)
+        >>= doesFileExist
+        >>= \exists ->
+            if exists
+                then B.toFilePath (dir <> "/" <> bsPath) >>= B.readFile <&> html
+                else pure notFound
 routeToResp Env { dir } GET _ ["files", bsPath] =
     B.toFilePath (dir <> "/" <> bsPath)
         >>= doesFileExist
@@ -81,8 +97,8 @@ handle' env req@Req{path = (Path path), method } =
         Right bs -> routeToResp env method req bs
         Left _ -> pure notFound
 
-handle :: Env -> ByteString -> IO ByteString
+handle :: Env -> ByteString -> IO Resp
 handle env bsReq =
     case runParser bsReq of
-        Right req -> toBs <$> handle' env req
-        Left _ -> pure $ toBs notFound
+        Right req -> handle' env req
+        Left _ -> pure notFound

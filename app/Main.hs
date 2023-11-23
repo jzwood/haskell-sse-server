@@ -4,12 +4,26 @@ module Main (main) where
 
 import Data.Maybe (fromMaybe)
 import Handle
+import Format
 import Syntax
 import Network.Simple.TCP (HostPreference (..), recv, send, serve)
 import System.Environment (getArgs)
+import Data.ByteString (ByteString)
 import Data.ByteString.Char8 (pack)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy.Char8 as BLC
+
+did :: ByteString
+did = "id: 0"
+
+ddata :: ByteString
+ddata = "data: hello world"
+
+datum :: ByteString
+datum = "data: hello world"
+
+sser :: ByteString
+sser = "200 OK\r\ncontent-type: text/event-stream\r\n\r\n"
 
 main :: IO ()
 main = do
@@ -27,8 +41,8 @@ main = do
     serve (Host host) port $ \(serverSocket, serverAddr) ->
         do
             BLC.putStrLn $ "Accepted connection from " <> BLC.pack (show serverAddr) <> "."
-            mReq <- recv serverSocket 1024
-            bsRes <- handle env $ fromMaybe B.empty mReq
-            --print mReq
+            bsReq <- fromMaybe B.empty <$> recv serverSocket 1024
+            bsRes <- handle env bsReq
+            --print bsReq
             --print bsRes
-            send serverSocket bsRes
+            send serverSocket (toBs bsRes)
