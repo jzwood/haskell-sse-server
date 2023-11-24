@@ -2,16 +2,17 @@
 
 module Main (main) where
 
-import Data.Maybe (fromMaybe)
-import Handle
-import Format
-import Syntax
-import Network.Simple.TCP (HostPreference (..), recv, send, serve)
-import System.Environment (getArgs)
+import Control.Monad (forever)
 import Data.ByteString (ByteString)
-import Data.ByteString.Char8 (pack)
 import qualified Data.ByteString as B
+import Data.ByteString.Char8 (pack)
 import qualified Data.ByteString.Lazy.Char8 as BLC
+import Data.Maybe (fromMaybe)
+import Format
+import Handle
+import Network.Simple.TCP (HostPreference (..), recv, send, serve)
+import Syntax
+import System.Environment (getArgs)
 
 did :: ByteString
 did = "id: 0"
@@ -45,4 +46,15 @@ main = do
             bsRes <- handle env bsReq
             --print bsReq
             --print bsRes
-            send serverSocket (toBs bsRes)
+            let isSse = B.empty == getHeader "text/event-stream" (headers' bsRes)
+            if isSse
+                then do
+                    print "SSE START\n\n"
+                    send serverSocket (toBs bsRes)
+                    print (toBs bsRes)
+                    forever $ do
+                        --forkIO $ handle conn store
+                        print "SSE\n\n"
+                        send serverSocket did
+                        send serverSocket ddata
+                else send serverSocket (toBs bsRes)

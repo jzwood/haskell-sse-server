@@ -34,7 +34,7 @@ ok contentType status body'  =
         }
 
 sse :: Resp
-sse = ok "text/event-stream" 200 "chat"
+sse = ok "text/event-stream" 200 "data: chat"
 
 txt :: ByteString -> Resp
 txt = ok "text/plain" 200
@@ -69,7 +69,7 @@ parseRoute =
 routeToResp :: Env -> Method -> Req -> [ByteString] -> IO Resp
 routeToResp _ GET _ ["/"] = pure $ txt ""
 routeToResp _ GET _ ["echo", echo] = pure $ txt echo
-routeToResp _ GET _ ["sse"] = pure $ txt "SSE"
+routeToResp _ GET _ ["sse"] = pure sse
 routeToResp _ GET Req { headers } ["user-agent"] = pure $ txt (getHeader "User-Agent" headers)
 routeToResp Env { dir } GET _ ["html", bsPath] =
     B.toFilePath (dir <> "/" <> bsPath)

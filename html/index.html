@@ -2,15 +2,19 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title></title>
+  <link rel="icon" href="/html/favicon.svg">
+  <title>SSE</title>
 </head>
 <body>
   <div>
     hello there
   </div>
   <script>
-    // const evtSource = new EventSource("/echo/hi")
-    console.log("HIIIIII")
+    console.log("START")
+    const evtSource = new EventSource("/sse")
+    evtSource.onmessage = (event) => {
+      console.log("EVENT", event)
+    }
   </script>
 </body>
 </html>
