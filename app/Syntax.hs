@@ -4,7 +4,7 @@ import Data.ByteString (ByteString)
 import qualified Data.ByteString as B
 import Data.Function
 import Data.Maybe (fromMaybe)
-import Data.List (lookup)
+--import Data.List (lookup)
 
 type KeyVal = (ByteString, ByteString)
 type Map = [KeyVal]

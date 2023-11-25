@@ -13,8 +13,11 @@
     console.log("START")
     const evtSource = new EventSource("/sse")
     evtSource.onmessage = (event) => {
-      console.log("EVENT", event)
+      console.log("EVENT A", event)
     }
+    evtSource.addEventListener("notice", (e) => {
+      console.log("EVENT B", e.event)
+    });
   </script>
 </body>
 </html>

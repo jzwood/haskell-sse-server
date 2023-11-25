@@ -14,7 +14,7 @@ import System.Directory (doesFileExist)
 --import Data.Attoparsec.ByteString.Char8 (Parser, char8, count, decimal, digit, endOfLine, isSpace, parseOnly, skipSpace, space, string, take, takeTill)
 import Data.Attoparsec.ByteString.Char8 (Parser, endOfInput, parseOnly, string, takeByteString)
 import qualified Data.ByteString as B
-import Format
+import qualified Format
 import Parser
 import Syntax
 
