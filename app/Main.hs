@@ -9,7 +9,7 @@ import Data.ByteString.Char8 (pack)
 import qualified Data.ByteString.Lazy.Char8 as BLC
 import qualified Format
 import Handle
-import Parser (runParser)
+import Parser (parseReq, parseOnly)
 
 --import Network.Simple.TCP (HostPreference (..), recv, send, serve)
 import Syntax
@@ -52,31 +52,6 @@ sser :: ByteString
 --sser = "200 OK\r\ncontent-type: text/event-stream\r\n\r\n"
 sser = "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nConnection: Keep-Alive\r\nContent-Length: 0\r\n\r\n"
 
-onRequest :: Env -> Socket -> Req -> IO ()
-onRequest env conn req = do
-    res <- handle env req
-    let isSse = B.empty == getHeader "text/event-stream" (headers' res)
-    if isSse
-        then do
-            _ <- print "A"
-            _ <- print (Format.pack res)
-            _ <- sendTo conn (Format.pack res) addr
-            _ <- sendTo conn hi addr
-            return ()
-        else --close conn
-        do
-            _ <- print "B"
-            _ <- send conn (Format.pack res)
-            close conn
-
---case runParser req of
---Right rast -> do
-----res <- Handler.handle rast
---send conn "200" -- res
-----_ <- forkIO $ handle conn
---return ()
---Left _ -> close conn
-
 main :: IO ()
 main = do
     argv <- getArgs
@@ -85,6 +60,7 @@ main = do
 
     let host = 1024
         port = 4221 :: PortNumber
+        -- TODO have env include host and port
         env = case argv of
             ["--directory", directory] -> Env $ pack directory
             _ -> Env B.empty
@@ -98,6 +74,6 @@ main = do
     forever $ do
         (conn, _address) <- accept sock
         bReq <- recv conn host
-        forkIO $ case runParser bReq of
+        forkIO $ case parseOnly parseReq bReq of
             Left _ -> close conn
-            Right req -> onRequest env conn req
+            Right req -> handle env conn req

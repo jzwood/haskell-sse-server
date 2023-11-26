@@ -1,12 +1,12 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Parser (parseReq, runParser) where
+module Parser (parseReq, parseOnly) where
 
 import Syntax
 
 import Control.Applicative
-import Data.Attoparsec.ByteString.Char8 ( Parser, endOfLine, isSpace, many', parseOnly, skipSpace, space, string, take, takeTill)
+import Data.Attoparsec.ByteString.Char8 (Parser, endOfInput, endOfLine, isSpace, many', parseOnly, skipSpace, space, string, take, takeTill, takeByteString)
 import Data.ByteString (ByteString)
 import Data.ByteString.Char8 (readInt)
 import Data.Function
@@ -20,6 +20,16 @@ parseMethod =
 
 parsePath :: Parser Path
 parsePath = Path <$> takeTill isSpace
+
+data Route = Whack | Agent | Sse | File ByteString | Html ByteString | Echo ByteString
+
+parseRoute :: Parser Route
+parseRoute = (string "/" *> endOfInput $> Whack)
+        <|> (string "/user-agent" *> endOfInput $> Agent)
+        <|> (string "/sse" $> Sse)
+        <|> (string "/files/" *> takeByteString <&> File)
+        <|> (string "/html/" *> takeByteString <&> Html)
+        <|> (string "/echo/" *> takeByteString <&> Echo)
 
 parseProtocol :: Parser Protocol
 parseProtocol =
@@ -57,6 +67,3 @@ parseReq =
         <*> parseProtocol
         <* endOfLine
         <*> parseHeadersAndBody
-
-runParser :: ByteString -> Either String Req
-runParser = parseOnly parseReq

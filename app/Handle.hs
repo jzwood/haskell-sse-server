@@ -2,7 +2,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Handle (handle, parseRequest) where
+module Handle (handle) where
 
 import Control.Applicative
 import Data.ByteString (ByteString)
@@ -10,6 +10,7 @@ import qualified Data.ByteString as B
 import Data.ByteString.Char8 (pack)
 import Data.Functor
 import System.Directory (doesFileExist)
+import Network.Socket ( Socket)
 
 --import Data.Attoparsec.ByteString.Char8 (Parser, char8, count, decimal, digit, endOfLine, isSpace, parseOnly, skipSpace, space, string, take, takeTill)
 import Data.Attoparsec.ByteString.Char8 (Parser, endOfInput, parseOnly, string, takeByteString)
@@ -91,20 +92,27 @@ routeToResp Env{dir} POST Req{body = Body body} ["files", bsPath] = do
     pure write
 routeToResp _ _ _ _ = pure notFound
 
-handle' :: Env -> Req -> IO Resp
-handle' env req@Req{path = (Path path), method} =
+
+handle :: Env -> Socket -> Req -> IO ()
+handle env conn req@Req{path = (Path path), method} =
     case parseOnly parseRoute path of
         Right bs -> routeToResp env method req bs
         Left _ -> pure notFound
 
-handle :: Env -> ByteString -> IO Resp
-handle env bReq =
-    case runParser bReq of
-        Right req -> handle' env req
-        Left _ -> pure notFound
 
-parseRequest :: ByteString -> Maybe Req
-parseRequest bReq =
-    case runParser bReq of
-        Right req -> Just req
-        Left _ -> Nothing
+onRequest :: Env -> Socket -> Req -> IO ()
+onRequest env conn req = undefined
+    --res <- handle env req
+    --let isSse = B.empty == getHeader "text/event-stream" (headers' res)
+    --if isSse
+        --then do
+            --_ <- print "A"
+            --_ <- print (Format.pack res)
+            --_ <- sendTo conn (Format.pack res) addr
+            --_ <- sendTo conn hi addr
+            --return ()
+        --else --close conn
+        --do
+            --_ <- print "B"
+            --_ <- send conn (Format.pack res)
+            --close conn
