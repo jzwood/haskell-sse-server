@@ -2,7 +2,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Handle (handle, sse) where
+module Handle (handle, parseRequest) where
 
 import Control.Applicative
 import Data.ByteString (ByteString)
@@ -22,7 +22,7 @@ toHeader :: ByteString -> ByteString -> (ByteString, ByteString)
 toHeader = (,)
 
 ok :: ByteString -> Integer -> ByteString -> Resp
-ok contentType status body'  =
+ok contentType status body' =
     Resp
         { protocol' = HTTP1_1
         , status = Status status
@@ -34,7 +34,7 @@ ok contentType status body'  =
         }
 
 sse :: Resp
-sse = ok "text/event-stream" 200 "data: chat"
+sse = ok "text/event-stream" 200 "data: hi"
 
 txt :: ByteString -> Resp
 txt = ok "text/plain" 200
@@ -70,35 +70,41 @@ routeToResp :: Env -> Method -> Req -> [ByteString] -> IO Resp
 routeToResp _ GET _ ["/"] = pure $ txt ""
 routeToResp _ GET _ ["echo", echo] = pure $ txt echo
 routeToResp _ GET _ ["sse"] = pure sse
-routeToResp _ GET Req { headers } ["user-agent"] = pure $ txt (getHeader "User-Agent" headers)
-routeToResp Env { dir } GET _ ["html", bsPath] =
+routeToResp _ GET Req{headers} ["user-agent"] = pure $ txt (getHeader "User-Agent" headers)
+routeToResp Env{dir} GET _ ["html", bsPath] =
     B.toFilePath (dir <> "/" <> bsPath)
         >>= doesFileExist
         >>= \exists ->
             if exists
                 then B.toFilePath (dir <> "/" <> bsPath) >>= B.readFile <&> html
                 else pure notFound
-routeToResp Env { dir } GET _ ["files", bsPath] =
+routeToResp Env{dir} GET _ ["files", bsPath] =
     B.toFilePath (dir <> "/" <> bsPath)
         >>= doesFileExist
         >>= \exists ->
             if exists
                 then B.toFilePath (dir <> "/" <> bsPath) >>= B.readFile <&> file
                 else pure notFound
-routeToResp Env { dir } POST Req { body = Body body } ["files", bsPath] = do
+routeToResp Env{dir} POST Req{body = Body body} ["files", bsPath] = do
     path <- B.toFilePath (dir <> "/" <> bsPath)
     B.writeFile path body
     pure write
 routeToResp _ _ _ _ = pure notFound
 
 handle' :: Env -> Req -> IO Resp
-handle' env req@Req{path = (Path path), method } =
+handle' env req@Req{path = (Path path), method} =
     case parseOnly parseRoute path of
         Right bs -> routeToResp env method req bs
         Left _ -> pure notFound
 
 handle :: Env -> ByteString -> IO Resp
-handle env bsReq =
-    case runParser bsReq of
+handle env bReq =
+    case runParser bReq of
         Right req -> handle' env req
         Left _ -> pure notFound
+
+parseRequest :: ByteString -> Maybe Req
+parseRequest bReq =
+    case runParser bReq of
+        Right req -> Just req
+        Left _ -> Nothing

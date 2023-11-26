@@ -9,6 +9,7 @@ import Data.ByteString.Char8 (pack)
 import qualified Data.ByteString.Lazy.Char8 as BLC
 import qualified Format
 import Handle
+import Parser (runParser)
 
 --import Network.Simple.TCP (HostPreference (..), recv, send, serve)
 import Syntax
@@ -33,7 +34,7 @@ import Network.Socket (
     setSocketOption,
     socket,
  )
-import Network.Socket.ByteString (recv, send, sendAll, sendAllTo)
+import Network.Socket.ByteString (recv, send, sendAll, sendAllTo, sendTo)
 
 did :: ByteString
 did = "id: 0"
@@ -44,40 +45,27 @@ ddata = "data: hello world"
 datum :: ByteString
 datum = "data: hello world"
 
+hi :: ByteString
+hi = "8data: hi\r\n"
+
 sser :: ByteString
 --sser = "200 OK\r\ncontent-type: text/event-stream\r\n\r\n"
-sser = "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nContent-Length: 0\r\n\r\n"
+sser = "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nConnection: Keep-Alive\r\nContent-Length: 0\r\n\r\n"
 
-eachConn :: Env -> Socket -> SockAddr -> IO ()
-eachConn env conn addr = do
-    req <- recv conn 1024
-    --print req
+onRequest :: Env -> Socket -> Req -> IO ()
+onRequest env conn req = do
     res <- handle env req
-    print res
-    print "A"
     let isSse = B.empty == getHeader "text/event-stream" (headers' res)
     if isSse
         then do
+            _ <- print "A"
             _ <- print (Format.pack res)
-            _ <- send conn (Format.pack res)
-            _ <- forkIO $ do
-                _ <- threadDelay 1000
-                _ <- sendAllTo conn (Format.pack sse) addr
-                _ <- threadDelay 1000
-                _ <- sendAllTo conn (Format.pack sse) addr
-                _ <- threadDelay 1000
-                _ <- sendAllTo conn (Format.pack sse) addr
-                _ <- threadDelay 1000
-                _ <- sendAllTo conn (Format.pack sse) addr
-                _ <- threadDelay 1000
-                _ <- sendAllTo conn (Format.pack sse) addr
-                _ <- threadDelay 1000
-                _ <- sendAllTo conn (Format.pack sse) addr
-                _ <- threadDelay 1000
-                _ <- sendAllTo conn (Format.pack sse) addr
-                close conn
+            _ <- sendTo conn (Format.pack res) addr
+            _ <- sendTo conn hi addr
             return ()
-        else do
+        else --close conn
+        do
+            _ <- print "B"
             _ <- send conn (Format.pack res)
             close conn
 
@@ -95,7 +83,8 @@ main = do
 
     BLC.putStrLn "Logs from your program will appear here"
 
-    let port = 4221 :: PortNumber
+    let host = 1024
+        port = 4221 :: PortNumber
         env = case argv of
             ["--directory", directory] -> Env $ pack directory
             _ -> Env B.empty
@@ -107,5 +96,8 @@ main = do
     bind sock (SockAddrInet port 0)
     listen sock 5
     forever $ do
-        (conn, address) <- accept sock
-        forkIO $ eachConn env conn address
+        (conn, _address) <- accept sock
+        bReq <- recv conn host
+        forkIO $ case runParser bReq of
+            Left _ -> close conn
+            Right req -> onRequest env conn req
