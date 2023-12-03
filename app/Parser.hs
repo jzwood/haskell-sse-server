@@ -18,17 +18,13 @@ parseMethod =
     (string "GET" $> GET)
         <|> (string "POST" $> POST)
 
---parsePath :: Parser Path
---parsePath = Path <$> takeTill isSpace
-
 parseRoute :: Parser Route
-parseRoute =
-    (string "/" *> endOfInput $> Whack)
-        <|> (string "/user-agent" *> endOfInput $> Agent)
+parseRoute = (string "/user-agent" *> endOfInput $> Agent)
         <|> (string "/sse" $> Sse)
         <|> (string "/files/" *> takeByteString <&> File)
         <|> (string "/html/" *> takeByteString <&> Html)
         <|> (string "/echo/" *> takeByteString <&> Echo)
+        <|> (string "/" *> endOfInput $> Whack)
 
 parseProtocol :: Parser Protocol
 parseProtocol =

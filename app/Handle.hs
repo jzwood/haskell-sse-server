@@ -2,7 +2,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Handle (handle) where
+module Handle (handle, notFound) where
 
 import Control.Applicative
 import Data.ByteString (ByteString)
@@ -40,15 +40,16 @@ toHeader = (,)
 
 ok :: ByteString -> Integer -> ByteString -> ByteString
 ok contentType status body' =
-    Format.pack $ Resp
-        { protocol' = HTTP1_1
-        , status = Status status
-        , headers' =
-            [ toHeader "Content-Type" contentType
-            , toHeader "Content-Length" ((pack . show . B.length) body')
-            ]
-        , body'
-        }
+    Format.pack $
+        Resp
+            { protocol' = HTTP1_1
+            , status = Status status
+            , headers' =
+                [ toHeader "Content-Type" contentType
+                , toHeader "Content-Length" ((pack . show . B.length) body')
+                ]
+            , body'
+            }
 
 sse :: ByteString
 sse = ok "text/event-stream" 200 "data: hi"
@@ -64,29 +65,30 @@ html = ok "text/html" 200
 
 notFound :: ByteString
 notFound =
-    Format.pack $ Resp
-        { protocol' = HTTP1_1
-        , status = Status 404
-        , headers' = []
-        , body' = ""
-        }
+    Format.pack $
+        Resp
+            { protocol' = HTTP1_1
+            , status = Status 404
+            , headers' = []
+            , body' = ""
+            }
 
 handle :: Env -> Socket -> Req -> IO ()
 handle _ conn Req{method = GET, route = Whack} = send conn (txt "") >> close conn
 handle _ conn Req{method = GET, route = Echo msg} = send conn (txt msg) >> close conn
 handle _ conn Req{method = GET, route = Agent, headers} = send conn (txt $ getHeader "User-Agent" headers) >> close conn
-handle Env {dir}  conn Req{method = GET, route = Html bpath} = do
+handle Env{dir} conn Req{method = GET, route = Html bpath} = do
     fpath <- B.toFilePath (dir <> "/" <> bpath)
     isFile <- doesFileExist fpath
     if isFile
-       then B.readFile fpath >>= send conn . html >> close conn
-       else send conn notFound >> close conn
-handle Env {dir}  conn Req{method = GET, route = File bpath} = do
+        then B.readFile fpath >>= send conn . html >> close conn
+        else send conn notFound >> close conn
+handle Env{dir} conn Req{method = GET, route = File bpath} = do
     fpath <- B.toFilePath (dir <> "/" <> bpath)
     isFile <- doesFileExist fpath
     if isFile
-       then B.readFile fpath >>= send conn . file >> close conn
-       else send conn notFound >> close conn
+        then B.readFile fpath >>= send conn . file >> close conn
+        else send conn notFound >> close conn
 handle _ conn _ = send conn notFound >> close conn
 
 --Left _ -> send conn (Format.pack notFound) >> close conn

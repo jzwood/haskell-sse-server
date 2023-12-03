@@ -9,7 +9,7 @@ import Data.ByteString.Char8 (pack)
 import qualified Data.ByteString.Lazy.Char8 as BLC
 import qualified Format
 import Handle
-import Parser (parseReq, parseOnly)
+import Parser (parseOnly, parseReq)
 import Syntax
 import System.Environment (getArgs)
 
@@ -30,7 +30,7 @@ import Network.Socket (
     setSocketOption,
     socket,
  )
-import Network.Socket.ByteString (recv)
+import Network.Socket.ByteString (recv, send, sendAll, sendAllTo, sendTo)
 
 --sser = "200 OK\r\ncontent-type: text/event-stream\r\n\r\n"
 --sser = "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nConnection: Keep-Alive\r\nContent-Length: 0\r\n\r\n"
@@ -57,6 +57,7 @@ main = do
     forever $ do
         (conn, _address) <- accept sock
         bReq <- recv conn host
+        print bReq
         forkIO $ case parseOnly parseReq bReq of
-            Left _ -> close conn
+            Left _ -> send conn notFound >> close conn
             Right req -> handle env conn req

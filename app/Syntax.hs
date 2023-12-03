@@ -4,7 +4,6 @@ import Data.ByteString (ByteString)
 import qualified Data.ByteString as B
 import Data.Function
 import Data.Maybe (fromMaybe)
---import Data.List (lookup)
 
 type KeyVal = (ByteString, ByteString)
 type Map = [KeyVal]
@@ -13,9 +12,6 @@ getHeader :: ByteString -> Map -> ByteString
 getHeader key hs = lookup key hs & fromMaybe B.empty
 
 newtype Env = Env { dir :: ByteString }
-
---newtype Path = Path ByteString
-    --deriving (Eq, Show)
 
 data Route = Whack | Agent | Sse | File ByteString | Html ByteString | Echo ByteString
     deriving (Eq, Show)
