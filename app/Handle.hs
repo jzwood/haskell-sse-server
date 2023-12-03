@@ -9,12 +9,28 @@ import Data.ByteString (ByteString)
 import qualified Data.ByteString as B
 import Data.ByteString.Char8 (pack)
 import Data.Functor
+import Network.Socket (
+    Family (..),
+    PortNumber (..),
+    SockAddr (..),
+    Socket,
+    SocketOption (..),
+    SocketType (..),
+    accept,
+    bind,
+    close,
+    defaultProtocol,
+    listen,
+    setSocketOption,
+    socket,
+ )
 import System.Directory (doesFileExist)
-import Network.Socket ( Socket)
 
 --import Data.Attoparsec.ByteString.Char8 (Parser, char8, count, decimal, digit, endOfLine, isSpace, parseOnly, skipSpace, space, string, take, takeTill)
 import Data.Attoparsec.ByteString.Char8 (Parser, endOfInput, parseOnly, string, takeByteString)
-import qualified Data.ByteString as B
+import Network.Socket.ByteString (recv, send, sendAll, sendAllTo, sendTo)
+
+--import qualified Data.ByteString as B
 import qualified Format
 import Parser
 import Syntax
@@ -22,9 +38,9 @@ import Syntax
 toHeader :: ByteString -> ByteString -> (ByteString, ByteString)
 toHeader = (,)
 
-ok :: ByteString -> Integer -> ByteString -> Resp
+ok :: ByteString -> Integer -> ByteString -> ByteString
 ok contentType status body' =
-    Resp
+    Format.pack $ Resp
         { protocol' = HTTP1_1
         , status = Status status
         , headers' =
@@ -34,85 +50,57 @@ ok contentType status body' =
         , body'
         }
 
-sse :: Resp
+sse :: ByteString
 sse = ok "text/event-stream" 200 "data: hi"
 
-txt :: ByteString -> Resp
+txt :: ByteString -> ByteString
 txt = ok "text/plain" 200
 
-file :: ByteString -> Resp
+file :: ByteString -> ByteString
 file = ok "application/octet-stream" 200
 
-write :: Resp
-write = ok "text/plain" 201 B.empty
-
-html :: ByteString -> Resp
+html :: ByteString -> ByteString
 html = ok "text/html" 200
 
-notFound :: Resp
+notFound :: ByteString
 notFound =
-    Resp
+    Format.pack $ Resp
         { protocol' = HTTP1_1
         , status = Status 404
         , headers' = []
         , body' = ""
         }
 
-parseRoute :: Parser [ByteString]
-parseRoute =
-    (string "/" *> endOfInput $> ["/"])
-        <|> (string "/user-agent" *> endOfInput $> ["user-agent"])
-        <|> (string "/files/" *> takeByteString <&> \path -> ["files", path])
-        <|> (string "/html/" *> takeByteString <&> \path -> ["html", path])
-        <|> (string "/sse" $> ["sse"])
-        <|> (string "/echo/" *> takeByteString <&> \echo -> ["echo", echo])
-
-routeToResp :: Env -> Method -> Req -> [ByteString] -> IO Resp
-routeToResp _ GET _ ["/"] = pure $ txt ""
-routeToResp _ GET _ ["echo", echo] = pure $ txt echo
-routeToResp _ GET _ ["sse"] = pure sse
-routeToResp _ GET Req{headers} ["user-agent"] = pure $ txt (getHeader "User-Agent" headers)
-routeToResp Env{dir} GET _ ["html", bsPath] =
-    B.toFilePath (dir <> "/" <> bsPath)
-        >>= doesFileExist
-        >>= \exists ->
-            if exists
-                then B.toFilePath (dir <> "/" <> bsPath) >>= B.readFile <&> html
-                else pure notFound
-routeToResp Env{dir} GET _ ["files", bsPath] =
-    B.toFilePath (dir <> "/" <> bsPath)
-        >>= doesFileExist
-        >>= \exists ->
-            if exists
-                then B.toFilePath (dir <> "/" <> bsPath) >>= B.readFile <&> file
-                else pure notFound
-routeToResp Env{dir} POST Req{body = Body body} ["files", bsPath] = do
-    path <- B.toFilePath (dir <> "/" <> bsPath)
-    B.writeFile path body
-    pure write
-routeToResp _ _ _ _ = pure notFound
-
-
 handle :: Env -> Socket -> Req -> IO ()
-handle env conn req@Req{path = (Path path), method} =
-    case parseOnly parseRoute path of
-        Right bs -> routeToResp env method req bs
-        Left _ -> pure notFound
+handle _ conn Req{method = GET, route = Whack} = send conn (txt "") >> close conn
+handle _ conn Req{method = GET, route = Echo msg} = send conn (txt msg) >> close conn
+handle _ conn Req{method = GET, route = Agent, headers} = send conn (txt $ getHeader "User-Agent" headers) >> close conn
+handle Env {dir}  conn Req{method = GET, route = Html bpath} = do
+    fpath <- B.toFilePath (dir <> "/" <> bpath)
+    isFile <- doesFileExist fpath
+    if isFile
+       then B.readFile fpath >>= send conn . html >> close conn
+       else send conn notFound >> close conn
+handle Env {dir}  conn Req{method = GET, route = File bpath} = do
+    fpath <- B.toFilePath (dir <> "/" <> bpath)
+    isFile <- doesFileExist fpath
+    if isFile
+       then B.readFile fpath >>= send conn . file >> close conn
+       else send conn notFound >> close conn
+handle _ conn _ = send conn notFound >> close conn
 
-
-onRequest :: Env -> Socket -> Req -> IO ()
-onRequest env conn req = undefined
-    --res <- handle env req
-    --let isSse = B.empty == getHeader "text/event-stream" (headers' res)
-    --if isSse
-        --then do
-            --_ <- print "A"
-            --_ <- print (Format.pack res)
-            --_ <- sendTo conn (Format.pack res) addr
-            --_ <- sendTo conn hi addr
-            --return ()
-        --else --close conn
-        --do
-            --_ <- print "B"
-            --_ <- send conn (Format.pack res)
-            --close conn
+--Left _ -> send conn (Format.pack notFound) >> close conn
+--res <- handle env req
+--let isSse = B.empty == getHeader "text/event-stream" (headers' res)
+--if isSse
+--then do
+--_ <- print "A"
+--_ <- print (Format.pack res)
+--_ <- sendTo conn (Format.pack res) addr
+--_ <- sendTo conn hi addr
+--return ()
+--else --close conn
+--do
+--_ <- print "B"
+--_ <- send conn (Format.pack res)
+--close conn

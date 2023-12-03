@@ -14,7 +14,10 @@ getHeader key hs = lookup key hs & fromMaybe B.empty
 
 newtype Env = Env { dir :: ByteString }
 
-newtype Path = Path ByteString
+--newtype Path = Path ByteString
+    --deriving (Eq, Show)
+
+data Route = Whack | Agent | Sse | File ByteString | Html ByteString | Echo ByteString
     deriving (Eq, Show)
 
 newtype Body = Body ByteString
@@ -31,7 +34,7 @@ data Protocol = HTTP1_0 | HTTP1_1 | HTTP2_0
 
 data Req = Req
     { method :: Method
-    , path :: Path
+    , route :: Route
     , protocol :: Protocol
     , headers :: Map
     , body :: Body

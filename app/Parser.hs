@@ -6,7 +6,7 @@ module Parser (parseReq, parseOnly) where
 import Syntax
 
 import Control.Applicative
-import Data.Attoparsec.ByteString.Char8 (Parser, endOfInput, endOfLine, isSpace, many', parseOnly, skipSpace, space, string, take, takeTill, takeByteString)
+import Data.Attoparsec.ByteString.Char8 (Parser, endOfInput, endOfLine, many', parseOnly, skipSpace, space, string, take, takeByteString, takeTill)
 import Data.ByteString (ByteString)
 import Data.ByteString.Char8 (readInt)
 import Data.Function
@@ -18,13 +18,12 @@ parseMethod =
     (string "GET" $> GET)
         <|> (string "POST" $> POST)
 
-parsePath :: Parser Path
-parsePath = Path <$> takeTill isSpace
-
-data Route = Whack | Agent | Sse | File ByteString | Html ByteString | Echo ByteString
+--parsePath :: Parser Path
+--parsePath = Path <$> takeTill isSpace
 
 parseRoute :: Parser Route
-parseRoute = (string "/" *> endOfInput $> Whack)
+parseRoute =
+    (string "/" *> endOfInput $> Whack)
         <|> (string "/user-agent" *> endOfInput $> Agent)
         <|> (string "/sse" $> Sse)
         <|> (string "/files/" *> takeByteString <&> File)
@@ -62,7 +61,7 @@ parseReq :: Parser Req
 parseReq =
     (\m pa pr (he, bo) -> Req m pa pr he bo) <$> parseMethod
         <* space
-        <*> parsePath
+        <*> parseRoute
         <* space
         <*> parseProtocol
         <* endOfLine

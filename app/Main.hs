@@ -10,15 +10,11 @@ import qualified Data.ByteString.Lazy.Char8 as BLC
 import qualified Format
 import Handle
 import Parser (parseReq, parseOnly)
-
---import Network.Simple.TCP (HostPreference (..), recv, send, serve)
 import Syntax
 import System.Environment (getArgs)
 
 import Control.Concurrent (ThreadId, forkIO, threadDelay)
 
---import Data.Function
---import Data.Functor
 import Network.Socket (
     Family (..),
     PortNumber (..),
@@ -34,23 +30,10 @@ import Network.Socket (
     setSocketOption,
     socket,
  )
-import Network.Socket.ByteString (recv, send, sendAll, sendAllTo, sendTo)
+import Network.Socket.ByteString (recv)
 
-did :: ByteString
-did = "id: 0"
-
-ddata :: ByteString
-ddata = "data: hello world"
-
-datum :: ByteString
-datum = "data: hello world"
-
-hi :: ByteString
-hi = "8data: hi\r\n"
-
-sser :: ByteString
 --sser = "200 OK\r\ncontent-type: text/event-stream\r\n\r\n"
-sser = "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nConnection: Keep-Alive\r\nContent-Length: 0\r\n\r\n"
+--sser = "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nConnection: Keep-Alive\r\nContent-Length: 0\r\n\r\n"
 
 main :: IO ()
 main = do
