@@ -9,7 +9,7 @@ import Data.ByteString.Char8 (pack)
 import qualified Data.ByteString.Lazy.Char8 as BLC
 import qualified Format
 import Handle
-import Parser (parseOnly, parseReq)
+import Parser (parseOnly, parseReq, parseRoute)
 import Syntax
 import System.Environment (getArgs)
 

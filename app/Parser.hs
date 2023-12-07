@@ -1,12 +1,13 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Parser (parseReq, parseOnly) where
+module Parser (parseReq, parseOnly, parseRoute) where
 
 import Syntax
 
 import Control.Applicative
 import Data.Attoparsec.ByteString.Char8 (Parser, endOfInput, endOfLine, many', parseOnly, skipSpace, space, string, take, takeByteString, takeTill)
+import Data.Char (isSpace)
 import Data.ByteString (ByteString)
 import Data.ByteString.Char8 (readInt)
 import Data.Function
@@ -18,13 +19,16 @@ parseMethod =
     (string "GET" $> GET)
         <|> (string "POST" $> POST)
 
+parseUrl :: Parser ByteString
+parseUrl = takeTill isSpace
+
 parseRoute :: Parser Route
-parseRoute = (string "/user-agent" *> endOfInput $> Agent)
+parseRoute = (string "/user-agent" $> Agent)
         <|> (string "/sse" $> Sse)
-        <|> (string "/files/" *> takeByteString <&> File)
-        <|> (string "/html/" *> takeByteString <&> Html)
-        <|> (string "/echo/" *> takeByteString <&> Echo)
-        <|> (string "/" *> endOfInput $> Whack)
+        <|> (string "/files/" *> parseUrl <&> File)
+        <|> (string "/html/" *> parseUrl <&> Html)
+        <|> (string "/echo/" *> parseUrl <&> Echo)
+        <|> (string "/" $> Whack)
 
 parseProtocol :: Parser Protocol
 parseProtocol =
@@ -58,7 +62,7 @@ parseReq =
     (\m pa pr (he, bo) -> Req m pa pr he bo) <$> parseMethod
         <* space
         <*> parseRoute
-        <* space
+        <* space -- maybe omit
         <*> parseProtocol
         <* endOfLine
         <*> parseHeadersAndBody
