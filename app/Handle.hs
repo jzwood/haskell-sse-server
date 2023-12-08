@@ -92,9 +92,10 @@ handle _ conn Req{method = GET, route = Echo msg} = send conn (txt msg) >> close
 handle _ conn Req{method = GET, route = Agent, headers} = send conn (txt $ getHeader "User-Agent" headers) >> close conn
 handle _ conn Req{method = GET, route = Sse} = do
     _ <- send conn sse
-    _ <- send conn "id\r\n"
-    _ <- send conn "data: hi\r\n"
-    _ <- send conn "message: world\r\n\r\n"
+    _ <- send conn "data: hello\r\n\r\n"
+    _ <- send conn "data: world\r\n\r\n"
+    _ <- send conn "data: this\r\n\r\n"
+    _ <- send conn "data: is\r\n\r\n"
     return ()
 --close conn
 

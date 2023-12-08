@@ -10,24 +10,30 @@
     hello there
   </div>
   <script>
-    console.log("START")
-    const sse = new EventSource("/sse")
+    document.addEventListener('DOMContentLoaded', main)
+    function main() {
+      console.log("START")
+      const sse = new EventSource("/sse")
 
-    sse.onmessage = (e) => {
-      console.log("onmessage", e.data)
+      sse.onmessage = (e) => {
+        console.log("onmessage", e.data)
+      }
+
+      sse.addEventListener("id", (e) => {
+        console.log("ID", e.data);
+      })
+
+      sse.addEventListener("message", (e) => {
+        console.log("message", e.data);
+      })
+
+      sse.addEventListener("data", (e) => {
+        console.log("data", e.data);
+      })
+      sse.addEventListener("notice", (e) => {
+        console.log("notice", e.data)
+      })
     }
-
-    sse.addEventListener("id", (e) => {
-      console.log("ID", e.data);
-    })
-
-    sse.addEventListener("message", (e) => {
-      console.log("message", e.data);
-    })
-
-    sse.addEventListener("data", (e) => {
-      console.log("data", e.data);
-    })
   </script>
 </body>
 </html>
