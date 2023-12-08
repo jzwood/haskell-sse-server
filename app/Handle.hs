@@ -5,6 +5,8 @@
 module Handle (handle, notFound) where
 
 import Control.Applicative
+import Control.Concurrent (ThreadId, forkIO, threadDelay)
+import Control.Monad (forever)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as B
 import Data.ByteString.Char8 (pack)
@@ -52,7 +54,18 @@ ok contentType status body' =
             }
 
 sse :: ByteString
-sse = ok "text/event-stream" 200 "data: hi"
+sse =
+    Format.pack $
+        Resp
+            { protocol' = HTTP1_1
+            , status = Status 200
+            , headers' =
+                [ ("Content-Type", "text/event-stream")
+                , ("Cache-Control", "no-cache")
+                , ("Connection", "keep-alive")
+                ]
+            , body' = ""
+            }
 
 txt :: ByteString -> ByteString
 txt = ok "text/plain" 200
@@ -77,6 +90,14 @@ handle :: Env -> Socket -> Req -> IO ()
 handle _ conn Req{method = GET, route = Whack} = send conn (txt "") >> close conn
 handle _ conn Req{method = GET, route = Echo msg} = send conn (txt msg) >> close conn
 handle _ conn Req{method = GET, route = Agent, headers} = send conn (txt $ getHeader "User-Agent" headers) >> close conn
+handle _ conn Req{method = GET, route = Sse} = do
+    _ <- send conn sse
+    _ <- send conn "id\r\n"
+    _ <- send conn "data: hi\r\n"
+    _ <- send conn "message: world\r\n\r\n"
+    return ()
+--close conn
+
 handle Env{dir} conn Req{method = GET, route = Html bpath} = do
     fpath <- B.toFilePath (dir <> "/" <> bpath)
     isFile <- doesFileExist fpath

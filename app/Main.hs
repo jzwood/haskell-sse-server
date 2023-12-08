@@ -57,7 +57,7 @@ main = do
     forever $ do
         (conn, _address) <- accept sock
         bReq <- recv conn host
-        print bReq
+        --print bReq
         forkIO $ case parseOnly parseReq bReq of
             Left _ -> send conn notFound >> close conn
             Right req -> handle env conn req

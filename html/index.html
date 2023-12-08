@@ -11,13 +11,23 @@
   </div>
   <script>
     console.log("START")
-    const evtSource = new EventSource("/sse")
-    evtSource.onmessage = (event) => {
-      console.log("EVENT A", event)
+    const sse = new EventSource("/sse")
+
+    sse.onmessage = (e) => {
+      console.log("onmessage", e.data)
     }
-    evtSource.addEventListener("notice", (e) => {
-      console.log("EVENT B", e.event)
-    });
+
+    sse.addEventListener("id", (e) => {
+      console.log("ID", e.data);
+    })
+
+    sse.addEventListener("message", (e) => {
+      console.log("message", e.data);
+    })
+
+    sse.addEventListener("data", (e) => {
+      console.log("data", e.data);
+    })
   </script>
 </body>
 </html>
