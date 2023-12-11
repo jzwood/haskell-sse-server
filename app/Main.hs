@@ -3,23 +3,20 @@
 module Main (main) where
 
 import Control.Monad (forever)
-import Data.ByteString (ByteString)
 import qualified Data.ByteString as B
 import Data.ByteString.Char8 (pack)
 import qualified Data.ByteString.Lazy.Char8 as BLC
-import qualified Format
 import Handle
-import Parser (parseOnly, parseReq, parseRoute)
+import Parser (parseOnly, parseReq)
 import Syntax
 import System.Environment (getArgs)
 
-import Control.Concurrent (ThreadId, forkIO, threadDelay)
+import Control.Concurrent (forkIO)
 
 import Network.Socket (
     Family (..),
     PortNumber (..),
     SockAddr (..),
-    Socket,
     SocketOption (..),
     SocketType (..),
     accept,
@@ -30,10 +27,7 @@ import Network.Socket (
     setSocketOption,
     socket,
  )
-import Network.Socket.ByteString (recv, send, sendAll, sendAllTo, sendTo)
-
---sser = "200 OK\r\ncontent-type: text/event-stream\r\n\r\n"
---sser = "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nConnection: Keep-Alive\r\nContent-Length: 0\r\n\r\n"
+import Network.Socket.ByteString (recv, send)
 
 main :: IO ()
 main = do

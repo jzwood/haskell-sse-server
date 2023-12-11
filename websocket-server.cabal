@@ -62,9 +62,7 @@ executable websocket-server
         Format
         Handle
         Parser
-        ParserExample
         Syntax
-        Test
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:

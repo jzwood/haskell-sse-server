@@ -1,15 +1,15 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Parser (parseReq, parseOnly, parseRoute) where
+module Parser (parseReq, parseOnly) where
 
 import Syntax
 
 import Control.Applicative
-import Data.Attoparsec.ByteString.Char8 (Parser, endOfInput, endOfLine, many', parseOnly, skipSpace, space, string, take, takeByteString, takeTill)
-import Data.Char (isSpace)
+import Data.Attoparsec.ByteString.Char8 (Parser, endOfLine, many', parseOnly, skipSpace, space, string, take, takeTill)
 import Data.ByteString (ByteString)
 import Data.ByteString.Char8 (readInt)
+import Data.Char (isSpace)
 import Data.Function
 import Data.Functor
 import Prelude hiding (take)
@@ -23,7 +23,8 @@ parseUrl :: Parser ByteString
 parseUrl = takeTill isSpace
 
 parseRoute :: Parser Route
-parseRoute = (string "/user-agent" $> Agent)
+parseRoute =
+    (string "/user-agent" $> Agent)
         <|> (string "/sse" $> Sse)
         <|> (string "/files/" *> parseUrl <&> File)
         <|> (string "/html/" *> parseUrl <&> Html)
@@ -62,7 +63,7 @@ parseReq =
     (\m pa pr (he, bo) -> Req m pa pr he bo) <$> parseMethod
         <* space
         <*> parseRoute
-        <* space -- maybe omit
+        <* space
         <*> parseProtocol
         <* endOfLine
         <*> parseHeadersAndBody

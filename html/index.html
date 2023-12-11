@@ -6,33 +6,25 @@
   <title>SSE</title>
 </head>
 <body>
-  <div>
-    hello there
-  </div>
+  <pre id="root"></pre>
   <script>
     document.addEventListener('DOMContentLoaded', main)
     function main() {
-      console.log("START")
       const sse = new EventSource("/sse")
-
+      const root = document.getElementById("root")
+      sse.addEventListener('score', e => {
+        const data = e.data
+        const div = document.createElement("div")
+        div.textContent = data
+        root.appendChild(div)
+      })
       sse.onmessage = (e) => {
-        console.log("onmessage", e.data)
+        console.log(e.data)
+        // const data = e.data
+        // const div = document.createElement("div")
+        // div.textContent = data
+        // root.appendChild(div)
       }
-
-      sse.addEventListener("id", (e) => {
-        console.log("ID", e.data);
-      })
-
-      sse.addEventListener("message", (e) => {
-        console.log("message", e.data);
-      })
-
-      sse.addEventListener("data", (e) => {
-        console.log("data", e.data);
-      })
-      sse.addEventListener("notice", (e) => {
-        console.log("notice", e.data)
-      })
     }
   </script>
 </body>

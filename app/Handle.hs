@@ -1,40 +1,20 @@
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE NumericUnderscores #-}
 
 module Handle (handle, notFound) where
 
-import Control.Applicative
-import Control.Concurrent (ThreadId, forkIO, threadDelay)
+import Control.Applicative()
+import Control.Concurrent(ThreadId, forkIO, threadDelay)
 import Control.Monad (forever)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as B
 import Data.ByteString.Char8 (pack)
-import Data.Functor
-import Network.Socket (
-    Family (..),
-    PortNumber (..),
-    SockAddr (..),
-    Socket,
-    SocketOption (..),
-    SocketType (..),
-    accept,
-    bind,
-    close,
-    defaultProtocol,
-    listen,
-    setSocketOption,
-    socket,
- )
+import Data.Functor()
+import Network.Socket (Socket, close)
 import System.Directory (doesFileExist)
-
---import Data.Attoparsec.ByteString.Char8 (Parser, char8, count, decimal, digit, endOfLine, isSpace, parseOnly, skipSpace, space, string, take, takeTill)
-import Data.Attoparsec.ByteString.Char8 (Parser, endOfInput, parseOnly, string, takeByteString)
-import Network.Socket.ByteString (recv, send, sendAll, sendAllTo, sendTo)
-
---import qualified Data.ByteString as B
+import Network.Socket.ByteString (send)
 import qualified Format
-import Parser
 import Syntax
 
 toHeader :: ByteString -> ByteString -> (ByteString, ByteString)
@@ -92,10 +72,14 @@ handle _ conn Req{method = GET, route = Echo msg} = send conn (txt msg) >> close
 handle _ conn Req{method = GET, route = Agent, headers} = send conn (txt $ getHeader "User-Agent" headers) >> close conn
 handle _ conn Req{method = GET, route = Sse} = do
     _ <- send conn sse
-    _ <- send conn "data: hello\r\n\r\n"
-    _ <- send conn "data: world\r\n\r\n"
-    _ <- send conn "data: this\r\n\r\n"
-    _ <- send conn "data: is\r\n\r\n"
+    _ <- forever $ do
+        _ <- threadDelay 1_000_000
+        _ <- send conn "event: score\r\n"
+        _ <- send conn "data: {\"cat\": 123}\r\n"
+        _ <- send conn "data: {\"man\": 456}\r\n"
+        _ <- send conn "\r\n"
+        _ <- threadDelay 10_000_000
+        return ()
     return ()
 --close conn
 
@@ -112,19 +96,3 @@ handle Env{dir} conn Req{method = GET, route = File bpath} = do
         then B.readFile fpath >>= send conn . file >> close conn
         else send conn notFound >> close conn
 handle _ conn _ = send conn notFound >> close conn
-
---Left _ -> send conn (Format.pack notFound) >> close conn
---res <- handle env req
---let isSse = B.empty == getHeader "text/event-stream" (headers' res)
---if isSse
---then do
---_ <- print "A"
---_ <- print (Format.pack res)
---_ <- sendTo conn (Format.pack res) addr
---_ <- sendTo conn hi addr
---return ()
---else --close conn
---do
---_ <- print "B"
---_ <- send conn (Format.pack res)
---close conn
