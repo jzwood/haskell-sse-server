@@ -78,7 +78,7 @@ handle _ conn Req{method = GET, route = Sse} = do
         _ <- send conn "data: {\"cat\": 123}\r\n"
         _ <- send conn "data: {\"man\": 456}\r\n"
         _ <- send conn "\r\n"
-        _ <- threadDelay 10_000_000
+        _ <- threadDelay 5_000_000
         return ()
     return ()
 --close conn
